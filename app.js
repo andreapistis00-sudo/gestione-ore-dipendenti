@@ -7,7 +7,7 @@ function loadData() {
   return {
     pin: "1234",
     employees: [],
-    schedules: [],     // { id, employeeId, date, ore, note }
+    schedules: [],     // { id, employeeId, date, oraInizio, oraFine, ore, note }
     timeEntries: [],   // { id, employeeId, date, ore, tipo, note }
     adjustments: [],   // { id, employeeId, date, ore, motivo }
     closures: []        // { employeeId, month }
@@ -65,6 +65,21 @@ function currentMonthStr() {
 function formatDateIt(iso) {
   const [y, m, d] = iso.split("-");
   return `${d}/${m}/${y}`;
+}
+
+function timeToMinutes(t) {
+  if (!t) return null;
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function computeOreDaOrari(oraInizio, oraFine) {
+  const a = timeToMinutes(oraInizio);
+  const b = timeToMinutes(oraFine);
+  if (a === null || b === null) return 0;
+  let diffMin = b - a;
+  if (diffMin <= 0) diffMin += 24 * 60; // turno che finisce oltre mezzanotte
+  return Math.round((diffMin / 60) * 100) / 100;
 }
 
 function daysInMonth(monthStr) {
@@ -341,24 +356,34 @@ function renderTurniTable() {
   for (let i = 0; i < 7; i++) {
     const date = addDays(monday, i);
     const existing = data.schedules.find(s => s.employeeId === employeeId && s.date === date);
-    const ore = existing ? existing.ore : 0;
+    const oraInizio = existing ? (existing.oraInizio || "") : "";
+    const oraFine = existing ? (existing.oraFine || "") : "";
+    const ore = existing ? (existing.ore || 0) : 0;
     total += ore;
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${DAY_NAMES[i]}<br><small>${formatDateIt(date)}</small></td>
-      <td><input type="number" min="0" step="0.25" class="turno-ore" data-date="${date}" value="${ore}"></td>
+      <td><input type="time" class="turno-inizio" data-date="${date}" value="${oraInizio}"></td>
+      <td><input type="time" class="turno-fine" data-date="${date}" value="${oraFine}"></td>
+      <td><span class="turno-ore-calc" data-date="${date}">${ore}</span></td>
       <td><input type="text" class="turno-note" data-date="${date}" value="${existing ? escapeHtml(existing.note || "") : ""}"></td>
     `;
     tbody.appendChild(tr);
   }
   document.getElementById("turniTotale").textContent = total;
 
-  tbody.querySelectorAll(".turno-ore").forEach(inp => {
-    inp.addEventListener("input", () => {
-      let sum = 0;
-      tbody.querySelectorAll(".turno-ore").forEach(i => sum += parseFloat(i.value) || 0);
-      document.getElementById("turniTotale").textContent = sum;
-    });
+  function recalcRow(date) {
+    const inizio = tbody.querySelector(`.turno-inizio[data-date="${date}"]`).value;
+    const fine = tbody.querySelector(`.turno-fine[data-date="${date}"]`).value;
+    const ore = computeOreDaOrari(inizio, fine);
+    tbody.querySelector(`.turno-ore-calc[data-date="${date}"]`).textContent = ore;
+    let sum = 0;
+    tbody.querySelectorAll(".turno-ore-calc").forEach(el => sum += parseFloat(el.textContent) || 0);
+    document.getElementById("turniTotale").textContent = Math.round(sum * 100) / 100;
+  }
+
+  tbody.querySelectorAll(".turno-inizio, .turno-fine").forEach(inp => {
+    inp.addEventListener("input", () => recalcRow(inp.dataset.date));
   });
 }
 
@@ -366,16 +391,20 @@ document.getElementById("salvaTurniBtn").onclick = () => {
   const employeeId = document.getElementById("turniEmployeeSelect").value;
   if (!employeeId) { alert("Seleziona un dipendente"); return; }
   const tbody = document.getElementById("turniTableBody");
-  tbody.querySelectorAll(".turno-ore").forEach(inp => {
+  tbody.querySelectorAll(".turno-inizio").forEach(inp => {
     const date = inp.dataset.date;
-    const ore = parseFloat(inp.value) || 0;
+    const oraInizio = inp.value;
+    const oraFine = tbody.querySelector(`.turno-fine[data-date="${date}"]`).value;
     const note = tbody.querySelector(`.turno-note[data-date="${date}"]`).value.trim();
+    const ore = computeOreDaOrari(oraInizio, oraFine);
     let existing = data.schedules.find(s => s.employeeId === employeeId && s.date === date);
     if (existing) {
+      existing.oraInizio = oraInizio;
+      existing.oraFine = oraFine;
       existing.ore = ore;
       existing.note = note;
     } else {
-      data.schedules.push({ id: uid(), employeeId, date, ore, note });
+      data.schedules.push({ id: uid(), employeeId, date, oraInizio, oraFine, ore, note });
     }
   });
   saveData();
@@ -664,6 +693,8 @@ function renderEmpTurni() {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${DAY_NAMES[i]}<br><small>${formatDateIt(date)}</small></td>
+      <td>${existing && existing.oraInizio ? existing.oraInizio : "-"}</td>
+      <td>${existing && existing.oraFine ? existing.oraFine : "-"}</td>
       <td>${existing ? existing.ore : 0}</td>
       <td>${existing ? escapeHtml(existing.note || "") : ""}</td>
     `;
