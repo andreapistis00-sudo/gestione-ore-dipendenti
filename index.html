@@ -133,7 +133,9 @@
     <h4>Aggiungi / correggi ora lavorata</h4>
     <form id="adminEntryForm" class="grid-form">
       <label>Data<input id="adminEntryData" type="date" required></label>
-      <label>Ore lavorate<input id="adminEntryOre" type="number" step="0.25" min="0" required></label>
+      <label>Ora inizio<input id="adminEntryInizio" type="time" required></label>
+      <label>Ora fine<input id="adminEntryFine" type="time" required></label>
+      <label>Ore calcolate<input id="adminEntryOreCalc" type="text" readonly value="0"></label>
       <label>Tipo
         <select id="adminEntryTipo">
           <option value="non pagata">Non pagata</option>
@@ -149,7 +151,7 @@
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>Data</th><th>Ore</th><th>Tipo</th><th>Note</th><th>Azioni</th></tr>
+          <tr><th>Data</th><th>Orario</th><th>Ore</th><th>Tipo</th><th>Note</th><th>Azioni</th></tr>
         </thead>
         <tbody id="oreMensiliTableBody"></tbody>
       </table>
@@ -227,7 +229,9 @@
     <h3>Segna le tue ore</h3>
     <form id="employeeEntryForm" class="grid-form">
       <label>Data<input id="empEntryData" type="date" required></label>
-      <label>Ore lavorate<input id="empEntryOre" type="number" step="0.25" min="0" required></label>
+      <label>Ora inizio<input id="empEntryInizio" type="time" required></label>
+      <label>Ora fine<input id="empEntryFine" type="time" required></label>
+      <label>Ore calcolate<input id="empEntryOreCalc" type="text" readonly value="0"></label>
       <label class="full">Note<input id="empEntryNote"></label>
       <div class="full form-actions">
         <button type="submit" class="btn primary">➕ Segna ore</button>
@@ -244,7 +248,7 @@
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>Data</th><th>Ore</th><th>Tipo</th><th>Stato mese</th><th>Note</th></tr>
+          <tr><th>Data</th><th>Orario</th><th>Ore</th><th>Tipo</th><th>Stato mese</th><th>Note</th></tr>
         </thead>
         <tbody id="empStoricoTableBody"></tbody>
       </table>

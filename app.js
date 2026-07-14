@@ -8,7 +8,7 @@ function loadData() {
     pin: "1234",
     employees: [],
     schedules: [],     // { id, employeeId, date, oraInizio, oraFine, ore, note }
-    timeEntries: [],   // { id, employeeId, date, ore, tipo, note }
+    timeEntries: [],   // { id, employeeId, date, oraInizio, oraFine, ore, tipo, note }
     adjustments: [],   // { id, employeeId, date, ore, motivo }
     closures: []        // { employeeId, month }
   };
@@ -420,6 +420,14 @@ function isMonthClosed(employeeId, month) {
   return data.closures.some(c => c.employeeId === employeeId && c.month === month);
 }
 
+function updateAdminEntryOreCalc() {
+  const oraInizio = document.getElementById("adminEntryInizio").value;
+  const oraFine = document.getElementById("adminEntryFine").value;
+  document.getElementById("adminEntryOreCalc").value = computeOreDaOrari(oraInizio, oraFine);
+}
+document.getElementById("adminEntryInizio").addEventListener("input", updateAdminEntryOreCalc);
+document.getElementById("adminEntryFine").addEventListener("input", updateAdminEntryOreCalc);
+
 document.getElementById("adminEntryForm").addEventListener("submit", e => {
   e.preventDefault();
   const employeeId = document.getElementById("oreMensiliEmployeeSelect").value;
@@ -430,17 +438,22 @@ document.getElementById("adminEntryForm").addEventListener("submit", e => {
     alert("Il mese è chiuso: riapri il mese per modificare le ore.");
     return;
   }
+  const oraInizio = document.getElementById("adminEntryInizio").value;
+  const oraFine = document.getElementById("adminEntryFine").value;
   data.timeEntries.push({
     id: uid(),
     employeeId,
     date: dateInput,
-    ore: parseFloat(document.getElementById("adminEntryOre").value) || 0,
+    oraInizio,
+    oraFine,
+    ore: computeOreDaOrari(oraInizio, oraFine),
     tipo: document.getElementById("adminEntryTipo").value,
     note: document.getElementById("adminEntryNote").value.trim()
   });
   saveData();
   document.getElementById("adminEntryForm").reset();
   document.getElementById("adminEntryData").value = todayISO();
+  document.getElementById("adminEntryOreCalc").value = "0";
   renderOreMensili();
 });
 
@@ -465,6 +478,7 @@ function renderOreMensili() {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${formatDateIt(entry.date)}</td>
+      <td>${entry.oraInizio && entry.oraFine ? `${entry.oraInizio}–${entry.oraFine}` : "-"}</td>
       <td>${entry.ore}</td>
       <td>
         <select class="tipo-select" ${closed ? "disabled" : ""}>
@@ -619,6 +633,14 @@ document.getElementById("salvaPinBtn").onclick = () => {
 };
 
 /* ============ DIPENDENTE: INSERISCI ORE ============ */
+function updateEmpEntryOreCalc() {
+  const oraInizio = document.getElementById("empEntryInizio").value;
+  const oraFine = document.getElementById("empEntryFine").value;
+  document.getElementById("empEntryOreCalc").value = computeOreDaOrari(oraInizio, oraFine);
+}
+document.getElementById("empEntryInizio").addEventListener("input", updateEmpEntryOreCalc);
+document.getElementById("empEntryFine").addEventListener("input", updateEmpEntryOreCalc);
+
 document.getElementById("employeeEntryForm").addEventListener("submit", e => {
   e.preventDefault();
   const employeeId = session.employeeId;
@@ -628,17 +650,22 @@ document.getElementById("employeeEntryForm").addEventListener("submit", e => {
     document.getElementById("empEntryMsg").textContent = "Il mese selezionato è già stato chiuso dall'amministratore: non puoi più registrare ore per questa data.";
     return;
   }
+  const oraInizio = document.getElementById("empEntryInizio").value;
+  const oraFine = document.getElementById("empEntryFine").value;
   data.timeEntries.push({
     id: uid(),
     employeeId,
     date,
-    ore: parseFloat(document.getElementById("empEntryOre").value) || 0,
+    oraInizio,
+    oraFine,
+    ore: computeOreDaOrari(oraInizio, oraFine),
     tipo: "non pagata",
     note: document.getElementById("empEntryNote").value.trim()
   });
   saveData();
   document.getElementById("employeeEntryForm").reset();
   document.getElementById("empEntryData").value = todayISO();
+  document.getElementById("empEntryOreCalc").value = "0";
   document.getElementById("empEntryMsg").textContent = "Ore registrate correttamente.";
 });
 
@@ -663,6 +690,7 @@ function renderEmpStorico() {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${formatDateIt(entry.date)}</td>
+      <td>${entry.oraInizio && entry.oraFine ? `${entry.oraInizio}–${entry.oraFine}` : "-"}</td>
       <td>${entry.ore}</td>
       <td><span class="badge ${entry.tipo === 'pagata' ? 'pagata' : 'non-pagata'}">${entry.tipo}</span></td>
       <td>${closed ? '<span class="badge chiuso">Chiuso</span>' : 'Aperto'}</td>
